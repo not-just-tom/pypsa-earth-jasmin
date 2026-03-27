@@ -694,15 +694,32 @@ if __name__ == "__main__":
             logger.info(f"Completed availability calculation ({duration:2.2f}s)")
         else:
             availability = cutout.availabilitymatrix(regions, excluder, **kwargs)
+
         area = cutout.grid.to_crs(area_crs).area / 1e6
         area = xr.DataArray(
             area.values.reshape(cutout.shape), [cutout.coords["y"], cutout.coords["x"]]
         )
 
-        potential = capacity_per_sqkm * availability.sum("bus") * area
-
-        capacity_factor = correction_factor * func(capacity_factor=True, **resource)
-        layout = capacity_factor * area * capacity_per_sqkm
+        ############### work around here ################### ctrl + f to: shotton
+        
+        if 'replace_solar_potential_with_existing' in config: # literally no idea how to make this a boolean so just switching between is and is not
+            logger.info('Replacing solar potential with existing datasets.')
+ 
+            # Load and crop installed_capacity to match the filtered cutout coords
+            installed_capacity = xr.open_dataarray(config['synthetic_solar']).sel(
+                y=cutout.coords['y'], x=cutout.coords['x']
+            )
+            installed_capacity = installed_capacity.broadcast_like(area).fillna(0.0)
+ 
+            potential = installed_capacity
+            layout = installed_capacity
+            capacity_factor = correction_factor * func(capacity_factor=True, **resource)
+            p_nom_max = (installed_capacity * availability).sum(['y', 'x'])
+        else:
+            # Original potential/layout/p_nom_max logic
+            potential = capacity_per_sqkm * availability.sum("bus") * area        
+            capacity_factor = correction_factor * func(capacity_factor=True, **resource)
+            layout = capacity_factor * area * capacity_per_sqkm
 
         n_cells_lost = check_cutout_completness(capacity_factor)
 
@@ -714,7 +731,7 @@ if __name__ == "__main__":
             return_capacity=True,
             **resource,
         )
-
+        #if not 'replace_solar_potential_with_existing' in config: # this was here when i was doing the solar potential replacement, 
         logger.info(f"Calculating maximal capacity per bus (method '{p_nom_max_meth}')")
         if p_nom_max_meth == "simple":
             p_nom_max = capacity_per_sqkm * availability @ area
@@ -726,6 +743,11 @@ if __name__ == "__main__":
                 'Config key `potential` should be one of "simple" '
                 f'(default) or "conservative", not "{p_nom_max_meth}"'
             )
+
+        ############### work stops here ###################
+
+
+
 
         logger.info("Calculate average distances.")
         layoutmatrix = (layout * availability).stack(spatial=["y", "x"])
