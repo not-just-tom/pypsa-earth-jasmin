@@ -1,13 +1,12 @@
 #!/bin/bash
-#SBATCH --account=rockhpc_mcposd
+#SBATCH --account=gbov
 #SBATCH --job-name=china_run
-#SBATCH --partition=gpu-s_free
-#SBATCH --gres=gpu:L40:1
+#SBATCH --partition=standard
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --time=5-1:00:00
+#SBATCH --time=24:00:00
 #SBATCH --mem=64G
-#SBATCH --output=logs/slurm-%j.out
+#SBATCH -o logs/slurm-%j.out
+#SBATCH -e logs/slurm-%j.err
 
 # Load modules
 module load Miniforge
