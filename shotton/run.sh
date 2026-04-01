@@ -10,8 +10,6 @@
 #SBATCH -e logs/slurm-%j.err
 
 # Load modules
-module load Miniforge
-conda activate pypsa-earth
 
 # Change to repository root
 cd $SLURM_SUBMIT_DIR
