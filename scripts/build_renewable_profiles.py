@@ -702,11 +702,15 @@ if __name__ == "__main__":
 
         ############### work around here ################### ctrl + f to: shotton
         
-        if 'replace_solar_potential_with_existing' in config: # literally no idea how to make this a boolean so just switching between is and is not
+        if config['replace_solar_potential_with_existing'] is True: 
             logger.info('Replacing solar potential with existing datasets.')
+
+            def find_solar_data():
+                pass
  
             # Load and crop installed_capacity to match the filtered cutout coords
-            installed_capacity = xr.open_dataarray(config['synthetic_solar']).sel(
+            smart_solar = find_solar_data()
+            installed_capacity = xr.open_dataarray(smart_solar).sel(
                 y=cutout.coords['y'], x=cutout.coords['x']
             )
             installed_capacity = installed_capacity.broadcast_like(area).fillna(0.0)
@@ -731,7 +735,7 @@ if __name__ == "__main__":
             return_capacity=True,
             **resource,
         )
-        #if not 'replace_solar_potential_with_existing' in config: # this was here when i was doing the solar potential replacement, 
+
         logger.info(f"Calculating maximal capacity per bus (method '{p_nom_max_meth}')")
         if p_nom_max_meth == "simple":
             p_nom_max = capacity_per_sqkm * availability @ area

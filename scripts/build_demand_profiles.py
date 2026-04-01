@@ -300,6 +300,90 @@ def build_demand_profiles(
     start_date = pd.to_datetime(start_date)
     end_date = pd.to_datetime(end_date) - pd.Timedelta(hours=1)
     demand_profiles = demand_profiles.loc[start_date:end_date]
+
+    # === shotton === #
+    
+    from pathlib import Path
+    import re
+    countries = snakemake.params.countries  # list from config
+    base = Path('power_generation_hourly_by_country')
+    for country in countries:
+        country_dir = base / country
+        files = sorted(country_dir.glob('power_generation_2023_facility_*.csv')) # hardcoded 2023 year
+        facility_ids = [re.search(r'_facility_(\d+)\.csv$', f.name).group(1) for f in files]
+
+        # im keep with in in other loop just to preserve a multi-country run
+        for facility in facility_ids:
+            facility_csv = pd.read_csv(country_dir / f'power_generation_2023_facility_{facility}.csv')
+            lat_col = next((c for c in facility_csv.columns if c.lower()=='grid_latitude'), None)
+            lon_col = next((c for c in facility_csv.columns if c.lower()=='grid_longitude'), None)
+            if lat_col is None or lon_col is None:
+                logger.error(f"Facility {facility} has no lat/lon columns; skipping")
+                continue
+
+            # just take first row since per-facility files
+            lat = facility_csv[lat_col].iloc[0]
+            lon = facility_csv[lon_col].iloc[0]
+
+            
+            pt = gpd.GeoDataFrame(
+                {"facility": [facility]},
+                geometry=gpd.points_from_xy([lon], [lat]),
+                crs="EPSG:4326",
+            )
+
+            if pt.crs != regions.crs:
+                pt = pt.to_crs(regions.crs)
+
+            # use spatial nearest join to find the bus
+            try:
+                joined = gpd.sjoin_nearest(pt, regions["geometry"].to_frame(), how="left")
+                bus_id = joined["index_right"].iloc[0]
+            except Exception:
+                # fallback: compute min-distance to region centroids
+                centroids = regions.geometry.centroid
+                dists = centroids.distance(pt.geometry.iloc[0])
+                bus_id = dists.idxmin()
+
+            # now we have the bus remove the additional solar from the relevant column 
+            # load facility time series using known columns and subtract from demand_profiles
+            # facility CSV columns are known: 'datetime' and 'power_POA_cln'- check this last one. 
+            time_col = 'datetime'
+            gen_col = 'power_POA_cln'
+
+            if time_col not in facility_csv.columns or gen_col not in facility_csv.columns:
+                logger.warning(f"Facility {facility}: expected columns '{time_col}' and '{gen_col}' not found; skipping.")
+                continue
+
+            try:
+                facility_csv[time_col] = pd.to_datetime(facility_csv[time_col])
+            except Exception:
+                logger.warning(f"Facility {facility}: failed to parse '{time_col}'; skipping.")
+                continue
+
+            # adjusted time is 30 minutes before facility timestamp; floor to hour
+            facility_csv['adj_time'] = facility_csv[time_col] - pd.Timedelta(minutes=30)
+            facility_csv['adj_hour'] = facility_csv['adj_time'].dt.floor('H')
+
+            # aggregate generation per adjusted hour
+            per_hour = facility_csv.groupby('adj_hour')[gen_col].sum()
+
+            # align to demand_profiles index and subtract from the mapped bus column
+            bus_col = bus_id if bus_id in demand_profiles.columns else str(bus_id)
+            if bus_col not in demand_profiles.columns:
+                logger.warning(f"Mapped bus {bus_id} not present in demand_profiles columns; skipping subtraction for facility {facility}.")
+            else:
+                per_hour = per_hour.reindex(demand_profiles.index, fill_value=0)
+                sub_sum = per_hour.sum()
+                demand_profiles[bus_col] = demand_profiles[bus_col].sub(per_hour, fill_value=0)
+                negs = (demand_profiles[bus_col] < 0).sum()
+                if negs > 0:
+                    logger.warning(f"Clipping {negs} negative cells to zero on bus {bus_col} after subtracting facility {facility}.")
+                    demand_profiles[bus_col] = demand_profiles[bus_col].clip(lower=0)
+
+
+ # === shotton end === #
+
     demand_profiles.to_csv(out_path, header=True)
 
     logger.info(f"Demand_profiles csv file created for the corresponding snapshots.")
