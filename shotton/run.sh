@@ -2,6 +2,7 @@
 #SBATCH --account=gbov
 #SBATCH --job-name=china_run
 #SBATCH --partition=standard
+#SBATCH --qos=standard
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
 #SBATCH --mem=64G
