@@ -10,7 +10,8 @@
 #SBATCH -e logs/slurm-%j.err
 
 # Load modules
-source /gws/nopw/j04/gbov/PyPSA-Earth/conda-envs/pypsa-earth/bin/activate
+source ~/miniforge3/bin/activate
+conda activate pypsa
 
 # Change to repository root
 cd $SLURM_SUBMIT_DIR
