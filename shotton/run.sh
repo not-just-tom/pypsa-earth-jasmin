@@ -41,10 +41,5 @@ fi
 
 echo "Post-processing network: $NETWORK_PATH -> $OUTPUT_NETWORK"
 
-# Run scaling script 
-python3 scripts/scale_generation.py \
-  --network "$NETWORK_PATH" \
-  --obs-solar data/custom/observed_solar.csv \
-  --obs-conv data/custom/observed_conv.csv \
-  --output "$OUTPUT_NETWORK"
+
 
