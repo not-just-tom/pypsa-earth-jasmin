@@ -10,7 +10,7 @@
 #SBATCH -e logs/slurm-%j.err
 
 # Load modules
-module load jaspy 
+source /gws/nopw/j04/gbov/PyPSA-Earth/conda-envs/pypsa-earth/bin/activate
 
 # Change to repository root
 cd $SLURM_SUBMIT_DIR
