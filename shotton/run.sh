@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=gbov
 #SBATCH --job-name=china_run
-#SBATCH --partition=standard
+#SBATCH --partition=debug
 #SBATCH --qos=standard
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
@@ -10,6 +10,7 @@
 #SBATCH -e logs/slurm-%j.err
 
 # Load modules
+module load jaspy 
 
 # Change to repository root
 cd $SLURM_SUBMIT_DIR
