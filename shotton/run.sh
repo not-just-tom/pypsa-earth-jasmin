@@ -10,6 +10,7 @@
 #SBATCH -e logs/slurm-%j.err
 
 # Load modules
+module unload jaspy
 source ~/miniforge3/bin/activate
 conda activate pypsa
 
