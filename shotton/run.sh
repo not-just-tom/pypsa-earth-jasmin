@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=gbov
 #SBATCH --job-name=china_run
-#SBATCH --partition=debug
+#SBATCH --partition=standard
 #SBATCH --qos=standard
 #SBATCH --nodes=1
 #SBATCH --time=1:00:00
