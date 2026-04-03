@@ -702,7 +702,7 @@ if __name__ == "__main__":
 
         ############### work around here ################### ctrl + f to: shotton
         
-        if config['replace_solar_potential_with_existing'] is True: 
+        if config.get('replace_solar_potential_with_existing', False) is True: 
             logger.info('Replacing solar potential with existing datasets.')
 
             def find_solar_data():
