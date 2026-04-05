@@ -48,6 +48,7 @@ scenario:
   ll: ["copt"]
   clusters: [113]
   opts: [Co2L-3h]
+  technology: ['onwind', 'offwind-ac', 'offwind-dc'] # shotton added this in to remove solar from tech. 
   planning_horizons: # investment years for myopic and perfect; or costs year for overnight
   - 2030
   sopts:
