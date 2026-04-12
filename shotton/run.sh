@@ -2,9 +2,9 @@
 #SBATCH --account=gbov
 #SBATCH --job-name=china_run
 #SBATCH --partition=standard
-#SBATCH --qos=standard
+#SBATCH --qos=high
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --mem=64G
 #SBATCH -o logs/slurm-%j.out
 #SBATCH -e logs/slurm-%j.err
