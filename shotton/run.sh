@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=gbov
-#SBATCH --job-name=china_run
+#SBATCH --job-name=uk_run
 #SBATCH --partition=standard
 #SBATCH --qos=high
 #SBATCH --nodes=1
