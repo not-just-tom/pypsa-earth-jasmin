@@ -3,7 +3,6 @@
 #SBATCH --job-name=china_run
 #SBATCH --partition=orchid
 #SBATCH --qos=orchid
-#SBATCH --gres:gpu:1
 #SBATCH --nodes=1
 #SBATCH --time=2-00:00:00
 #SBATCH --mem=64G
