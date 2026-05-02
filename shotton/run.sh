@@ -1,9 +1,10 @@
 #!/bin/bash
 #SBATCH --account=gbov
-#SBATCH --job-name=china_run
+#SBATCH --job-name=uk_run
 #SBATCH --partition=standard
+#SBATCH --qos=high
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --mem=64G
 #SBATCH -o logs/slurm-%j.out
 #SBATCH -e logs/slurm-%j.err
@@ -59,12 +60,5 @@ fi
 : ${NETWORK_PATH:="results/networks/elec_s_10_ec_lcopt_Co2L-3h.nc"}
 : ${OUTPUT_NETWORK:="results/networks/elec_s_10_ec_lcopt_Co2L-3h_scaled.nc"}
 
-echo "Post-processing network: $NETWORK_PATH -> $OUTPUT_NETWORK"
 
-# Run scaling script 
-python3 scripts/scale_generation.py \
-  --network "$NETWORK_PATH" \
-  --obs-solar data/custom/observed_solar.csv \
-  --obs-conv data/custom/observed_conv.csv \
-  --output "$OUTPUT_NETWORK"
 

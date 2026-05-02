@@ -1,8 +1,4 @@
 #!/bin/bash
-# Simple per-country Slurm runner for PyPSA-Earth
-# Usage: sbatch run_country.sh <config-file>
-# Expects to be submitted from repository root (SLURM_SUBMIT_DIR)
-
 #SBATCH --account=gbov
 #SBATCH --job-name=pypsa_country
 #SBATCH --partition=orchid
