@@ -6,7 +6,9 @@
 #SBATCH --account=gbov
 #SBATCH --job-name=pypsa_country
 #SBATCH --partition=orchid
+#SBATCH --account=orchid
 #SBATCH --qos=orchid
+#SBATCH --gres=gpu:1
 #SBATCH --time=24:00:00
 #SBATCH --mem=64G
 #SBATCH -o logs/slurm-%j.out
