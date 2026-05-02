@@ -18,9 +18,9 @@ set -euo pipefail
 
 if [ "$#" -lt 1 ]; then
   echo "Usage: $0 <config-file>"
-  exit 2
+  exit 2ada
 fi
-
+snakemake -s Snakefile --unlock || true
 CONFIG_FILE="$1"
 
 # Activate conda environment (adjust path if necessary)
@@ -35,4 +35,4 @@ cd "$SLURM_SUBMIT_DIR"
 
 echo "Running snakemake with configfile: $CONFIG_FILE"
 # Run snakemake in the repository root, using the provided config file
-snakemake -j 1 --configfile "$CONFIG_FILE" 
+snakemake -j 1 solve_all_networks --configfile "$CONFIG_FILE" 
