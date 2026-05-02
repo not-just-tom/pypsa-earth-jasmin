@@ -17,9 +17,9 @@ Usage: python shotton/submit_countries.py
 """
 import os
 import sys
-import shutil
 import subprocess
 from pathlib import Path
+import argparse
 
 try:
     import yaml
@@ -42,11 +42,9 @@ CUTOUTS_DIR = ROOT / "cutouts"
 RESULTS_DIR = ROOT / "results"
 
 def all_alpha2_codes():
-    if pycountry is not None:
-        return sorted({c.alpha_2 for c in pycountry.countries})
-    else:
-        # raise error
-        print("Warning: pycountry not available")
+    if pycountry is None:
+        raise RuntimeError("pycountry is required unless you pass --countries on the command line")
+    return sorted({c.alpha_2 for c in pycountry.countries})
 
 def load_yaml(p: Path):
     with p.open() as f:
@@ -94,29 +92,39 @@ def is_done(alpha2: str):
     return False
 
 def submit_job(config_path: Path):
-    # create a small job script that calls run_country.sh using the generated config
-    jobdir = ROOT / "shotton" / "jobs"
-    jobdir.mkdir(parents=True, exist_ok=True)
+    # Submit the real job script directly to sbatch so the SBATCH directives
+    # in shotton/run_country.sh are used. Avoid creating an outer wrapper
+    # that itself calls sbatch (some clusters reject such double-submission).
     alpha2 = config_path.stem.split("_")[-1]
-    jobfile = jobdir / f"job_{alpha2}.sh"
-    with jobfile.open("w") as f:
-        f.write("""#!/bin/bash
-# Auto-generated job wrapper
-sbatch shotton/run_country.sh %s
-""" % str(config_path))
-    jobfile.chmod(0o755)
-    # submit
-    print(f"Submitting {jobfile} for {alpha2}")
-    subprocess.check_call(["sbatch", str(jobfile)])
+    job_cmd = ["sbatch", "shotton/run_country.sh", str(config_path)]
+    print(f"Submitting {config_path} for {alpha2}")
+    try:
+        subprocess.check_call(job_cmd)
+    except subprocess.CalledProcessError as e:
+        print(f"sbatch failed for {alpha2}: {e}")
+    except FileNotFoundError:
+        print("sbatch not found in PATH; are you on the login node?")
 
 def main():
-    codes = all_alpha2_codes()
+    parser = argparse.ArgumentParser(description="Generate per-country configs and submit sbatch jobs")
+    parser.add_argument("--account", help="Slurm account to pass to sbatch (-A)")
+    parser.add_argument("--countries", help="Comma-separated list of ISO alpha2 codes to run (overrides pycountry)")
+    args = parser.parse_args()
+
+    if args.countries:
+        codes = [c.strip().upper() for c in args.countries.split(",") if c.strip()]
+    else:
+        codes = all_alpha2_codes()
+
     print(f"Found {len(codes)} country codes to process")
     for code in codes:
         if is_done(code):
             print(f"Skipping {code}: already appears complete")
             continue
         cfg = make_country_config(code)
+        # If an account was requested, set SBATCH_ACCOUNT env so sbatch sees it
+        if args.account:
+            os.environ.setdefault("SBATCH_ACCOUNT", args.account)
         submit_job(cfg)
 
 if __name__ == "__main__":
