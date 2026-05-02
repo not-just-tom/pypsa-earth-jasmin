@@ -24,8 +24,12 @@ fi
 CONFIG_FILE="$1"
 
 # Activate conda environment (adjust path if necessary)
-source ~/miniforge3/bin/activate || true
-conda activate pypsa-earth || conda activate pypsa || true
+if [ -f "$HOME/miniforge3/bin/conda" ]; then
+  # Initialise conda for non-interactive shells
+  eval "$("$HOME"/miniforge3/bin/conda shell.bash hook)" || true
+fi
+# Try a couple of known environment names; prefer the shorter one found on this host
+conda activate pypsa 
 
 cd "$SLURM_SUBMIT_DIR"
 
