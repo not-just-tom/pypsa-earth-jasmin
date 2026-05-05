@@ -46,7 +46,7 @@ run:
 scenario:
   simpl: [""]
   ll: ["copt"]
-  clusters: [10]
+  clusters: ["min"]
   opts: [Co2L-3h]
   technology: ['onwind', 'offwind-ac', 'offwind-dc'] # shotton added this in to remove solar from tech. 
   planning_horizons: # investment years for myopic and perfect; or costs year for overnight
