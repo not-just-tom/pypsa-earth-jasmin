@@ -12,13 +12,6 @@
 
 set -euo pipefail
 
-if [ "$#" -lt 1 ]; then
-  echo "Usage: $0 <config-file>"
-  exit 2
-fi
-
-CONFIG_FILE="$1"
-
 # Initialise conda for non-interactive shells and activate environment
 if [ -f "$HOME/miniforge3/bin/conda" ]; then
   eval "$("$HOME"/miniforge3/bin/conda shell.bash hook)" || true
@@ -41,5 +34,5 @@ if [ "${ALLOW_SNAKEMAKE_UNLOCK:-0}" = "1" ]; then
   snakemake -s Snakefile --unlock || true
 fi
 
-echo "Running snakemake with configfile: $CONFIG_FILE"
-snakemake -j 1 solve_all_networks --configfile "$CONFIG_FILE"
+echo "Running snakemake with default config"
+snakemake -j 1 solve_all_networks
