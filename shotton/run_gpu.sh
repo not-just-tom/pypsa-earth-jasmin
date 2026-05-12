@@ -35,4 +35,7 @@ if [ "${ALLOW_SNAKEMAKE_UNLOCK:-0}" = "1" ]; then
 fi
 
 echo "Running snakemake with default config"
-snakemake -j 1 solve_all_networks
+snakemake -j 1 solve_all_networks \
+  --rerun-incomplete \
+  --latency-wait 60 \
+  --printshellcmds
