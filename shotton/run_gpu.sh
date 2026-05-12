@@ -27,10 +27,30 @@ which snakemake >/dev/null 2>&1 || { echo "snakemake not found in PATH; ensure i
 cd "$SLURM_SUBMIT_DIR"
 mkdir -p logs
 
-# Unlock only when explicitly requested.
-# Auto-unlocking from every job can let concurrent jobs bypass lock safety.
-if [ "${ALLOW_SNAKEMAKE_UNLOCK:-0}" = "1" ]; then
-  echo "ALLOW_SNAKEMAKE_UNLOCK=1 set, running one-time unlock"
+# Handle stale Snakemake lock carefully.
+has_lock=0
+if [ -f ".snakemake/lock" ]; then
+  has_lock=1
+elif [ -d ".snakemake/locks" ] && [ -n "$(ls -A .snakemake/locks 2>/dev/null)" ]; then
+  has_lock=1
+fi
+
+if [ "$has_lock" -eq 1 ]; then
+  active_count=0
+  if command -v squeue >/dev/null 2>&1; then
+    active_count="$(squeue -u "$USER" -h -o "%i|%T|%Z" 2>/dev/null | awk -F'|' -v wd="$SLURM_SUBMIT_DIR" -v self="${SLURM_JOB_ID:-}" '
+      $2 ~ /RUNNING|PENDING|COMPLETING|CONFIGURING|SUSPENDED/ && $3 == wd && $1 != self {c++}
+      END {print c+0}
+    ')"
+  fi
+
+  if [ "$active_count" -gt 0 ]; then
+    echo "Snakemake lock detected and $active_count other active job(s) share this workdir." >&2
+    echo "Refusing to unlock automatically to avoid interfering with running jobs." >&2
+    exit 3
+  fi
+
+  echo "Stale Snakemake lock detected with no other active jobs in this workdir; unlocking."
   snakemake -s Snakefile --unlock || true
 fi
 

@@ -7,8 +7,9 @@ Behavior
   falls back to a small builtin list of common codes (can be extended).
 - For each country it creates a generated config in `configs/generated/` that:
   - sets the `countries` list to the single alpha2 code
-  - sets `run.shared_cutouts` to False so cutouts are unique per run
-  - renames the atlite cutout key by appending the alpha2 code
+    - sets `enable.build_cutout` to True and `run.shared_cutouts` to False so
+        cutouts are built per country and not shared across runs
+    - sets `run.name` to isolate results/resources/logs by country
   - sets `scenario.clusters` to ["min"] so clustering picks the minimal
     allowed number for that country (avoids the n_clusters < groups error)
 - Skips countries that have an existing cutout file or an existing results file
@@ -58,19 +59,14 @@ def make_country_config(alpha2: str):
     cfg = load_yaml(CONFIG_TEMPLATE)
     # set single country
     cfg["countries"] = [alpha2]
-    # force unique cutouts per run
+    # Build and store cutouts per country to avoid shared-file collisions.
+    cfg.setdefault("enable", {})
+    cfg["enable"]["build_cutout"] = True
+
     cfg.setdefault("run", {})
     cfg["run"]["shared_cutouts"] = False
     # prefix results and outputs by setting the run name; this makes RDIR = '<alpha2>/'
     cfg["run"]["name"] = alpha2
-    # rename atlite cutout key so Snakemake writes cutouts/cutout-XXX-<alpha2>.nc
-    # we append the alpha2 to the configured cutout keys
-    if "atlite" in cfg and "cutouts" in cfg["atlite"]:
-        new = {}
-        for k, v in cfg["atlite"]["cutouts"].items():
-            new_key = f"{k}-{alpha2}"
-            new[new_key] = v
-        cfg["atlite"]["cutouts"] = new
     # set clusters to `min` so the workflow chooses minimal allowed clusters
     cfg.setdefault("scenario", {})
     cfg["scenario"]["clusters"] = ["min"]

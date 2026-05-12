@@ -25,7 +25,7 @@ enable:
   download_osm_data: true # If 'true', OpenStreetMap data will be downloaded for the above given countries
   download_global_buildings: true # If 'true', GlobalMLBuildingFootprints data will be downloaded for the above given countries
   build_natura_raster: true # If 'true', then an exclusion raster will be build. Otherwise use pregenerated raster.
-  build_cutout: false
+  build_cutout: true
   # If "build_cutout" : true, then environmental data is extracted according to `snapshots` date range and `countries`
   # requires cds API key https://cds.climate.copernicus.eu/api-how-to
   # More information https://atlite.readthedocs.io/en/latest/introduction.html#datasets
@@ -39,7 +39,7 @@ custom_rules: [] # Default empty [] or link to custom rule file e.g. ["my_folder
 run:
   name: "" # use this to keep track of runs with different settings
   sector_name: "" # use this to keep track of sector scenario runs
-  shared_cutouts: true # set to true to share the default cutout(s) across runs
+  shared_cutouts: false # set to false to ensure unique cutouts per run
   # Note: value false requires build_cutout to be enabled
   allow_scenario_failure: false # If True, the workflow will continue even if a scenario in run_scnenario fails
 
