@@ -56,10 +56,26 @@ def next_branch_name(repo: Path, base_name: str) -> str:
     return f"{base_name}-{i}"
 
 
-def create_country_config(worktree_dir: Path, country: str, generated_subdir: Path) -> Path:
-    config_template = worktree_dir / "config.yaml"
-    if not config_template.exists():
-        raise FileNotFoundError(f"Missing config template: {config_template}")
+def find_config_template(worktree_dir: Path, repo_dir: Path) -> Path:
+    candidates = ["config.yaml", "config.default.yaml"]
+
+    for name in candidates:
+        p = worktree_dir / name
+        if p.exists():
+            return p
+
+    for name in candidates:
+        p = repo_dir / name
+        if p.exists():
+            return p
+
+    raise FileNotFoundError(
+        "Missing config template. Tried worktree and repo for: " + ", ".join(candidates)
+    )
+
+
+def create_country_config(worktree_dir: Path, repo_dir: Path, country: str, generated_subdir: Path) -> Path:
+    config_template = find_config_template(worktree_dir, repo_dir)
 
     with config_template.open() as f:
         cfg = yaml.safe_load(f)
@@ -239,7 +255,7 @@ def main() -> int:
                 )
 
             print(f"[{country}] Generating config override")
-            cfg_path = create_country_config(country_worktree, country, generated_subdir)
+            cfg_path = create_country_config(country_worktree, repo, country, generated_subdir)
 
             print(f"[{country}] Submitting run job")
             run_jobid = submit_country_job(
@@ -263,7 +279,7 @@ def main() -> int:
                 stamp=stamp,
             )
             print(f"[{country}] Regenerating config override after recreation")
-            cfg_path = create_country_config(country_worktree, country, generated_subdir)
+            cfg_path = create_country_config(country_worktree, repo, country, generated_subdir)
             print(f"[{country}] Re-submitting run job")
             run_jobid = submit_country_job(
                 worktree_dir=country_worktree,
