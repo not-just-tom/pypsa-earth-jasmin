@@ -25,7 +25,7 @@ except Exception:
     raise
 
 
-DEFAULT_WORKTREES_ROOT = Path("/gws/ssde/j25b/gbov/multi-runs")
+DEFAULT_WORKTREES_ROOT = Path("/gws/ssde/j25b/gbov/PyPSA-Earth/multi-runs")
 DEFAULT_REPO_ROOT = Path("/gws/ssde/j25b/gbov/PyPSA-Earth/pypsa-earth-jasmin")
 
 
