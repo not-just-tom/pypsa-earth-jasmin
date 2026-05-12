@@ -17,10 +17,10 @@ Behavior
 Usage: python shotton/submit_countries.py
 """
 import os
-import sys
 import subprocess
 from pathlib import Path
 import argparse
+import re
 
 try:
     import yaml
@@ -87,7 +87,7 @@ def is_done(alpha2: str):
             return True
     return False
 
-def submit_job(config_path: Path):
+def submit_job(config_path: Path, dependency_jobid: str | None = None):
     # Submit the job using run.sh (includes full preprocessing).
     # Pass config via CONFIG_FILE environment variable.
     alpha2 = config_path.stem.split("_")[-1]
@@ -96,20 +96,38 @@ def submit_job(config_path: Path):
         "--job-name",
         alpha2,
         f"--export=CONFIG_FILE={config_path}",
-        "shotton/run.sh",
     ]
+    if dependency_jobid:
+        job_cmd.extend(["--dependency", f"afterok:{dependency_jobid}"])
+    job_cmd.extend([
+        "shotton/run.sh",
+    ])
     print(f"Submitting {config_path} for {alpha2}")
     try:
-        subprocess.check_call(job_cmd)
+        out = subprocess.check_output(job_cmd, text=True).strip()
+        # Typical output: "Submitted batch job 12345678"
+        m = re.search(r"(\d+)$", out)
+        if not m:
+            raise RuntimeError(f"Could not parse job id from sbatch output: {out}")
+        jobid = m.group(1)
+        print(f"Submitted {alpha2} as job {jobid}")
+        return jobid
     except subprocess.CalledProcessError as e:
         print(f"sbatch failed for {alpha2}: {e}")
+        return None
     except FileNotFoundError:
         print("sbatch not found in PATH; are you on the login node?")
+        return None
 
 def main():
     parser = argparse.ArgumentParser(description="Generate per-country configs and submit sbatch jobs")
     parser.add_argument("--account", help="Slurm account to pass to sbatch (-A)")
     parser.add_argument("--countries", help="Comma-separated list of ISO alpha2 codes to run (overrides pycountry)")
+    parser.add_argument(
+        "--parallel",
+        action="store_true",
+        help="Submit jobs without dependency chaining (higher risk of Snakemake lock conflicts)",
+    )
     args = parser.parse_args()
 
     if args.countries:
@@ -118,6 +136,7 @@ def main():
         codes = all_alpha2_codes()
 
     print(f"Found {len(codes)} country codes to process")
+    previous_jobid = None
     for code in codes:
         if is_done(code):
             print(f"Skipping {code}: already appears complete")
@@ -126,7 +145,13 @@ def main():
         # If an account was requested, set SBATCH_ACCOUNT env so sbatch sees it
         if args.account:
             os.environ.setdefault("SBATCH_ACCOUNT", args.account)
-        submit_job(cfg)
+        dep = None if args.parallel else previous_jobid
+        submitted = submit_job(cfg, dep)
+        if submitted is None:
+            print("Stopping after submission failure to avoid partial dependency chain.")
+            break
+        if not args.parallel:
+            previous_jobid = submitted
 
 if __name__ == "__main__":
     main()
