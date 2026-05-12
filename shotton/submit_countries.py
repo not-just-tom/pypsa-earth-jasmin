@@ -92,11 +92,16 @@ def is_done(alpha2: str):
     return False
 
 def submit_job(config_path: Path):
-    # Submit the real job script directly to sbatch so the SBATCH directives
-    # in shotton/run_country.sh are used. Avoid creating an outer wrapper
-    # that itself calls sbatch (some clusters reject such double-submission).
+    # Submit the job using run.sh (includes full preprocessing).
+    # Pass config via CONFIG_FILE environment variable.
     alpha2 = config_path.stem.split("_")[-1]
-    job_cmd = ["sbatch", "shotton/run_country.sh", str(config_path)]
+    job_cmd = [
+        "sbatch",
+        "--job-name",
+        alpha2,
+        f"--export=CONFIG_FILE={config_path}",
+        "shotton/run.sh",
+    ]
     print(f"Submitting {config_path} for {alpha2}")
     try:
         subprocess.check_call(job_cmd)
