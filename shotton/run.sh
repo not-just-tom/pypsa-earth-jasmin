@@ -1,8 +1,7 @@
 #!/bin/bash
 #SBATCH --account=gbov
-#SBATCH --job-name=uk_run
+#SBATCH --job-name=multi-country
 #SBATCH --partition=standard
-#SBATCH --qos=high
 #SBATCH --nodes=1
 #SBATCH --time=2-00:00:00
 #SBATCH --mem=64G
@@ -11,34 +10,32 @@
 
 set -euo pipefail
 
-# Initialise conda for non-interactive shells and activate environment
+# Load modules / initialise conda for non-interactive shells
 if [ -f "$HOME/miniforge3/bin/conda" ]; then
   eval "$("$HOME"/miniforge3/bin/conda shell.bash hook)" || true
 fi
-conda activate pypsa 2>/dev/null || conda activate pypsa-earth 2>/dev/null || {
-  echo "Failed to activate conda env 'pypsa' or 'pypsa-earth'" >&2
-  exit 1
-}
+# Try to activate the expected environment names
+conda activate pypsa 2>/dev/null || conda activate pypsa-earth 2>/dev/null || true
 
 # Change to repository root
 cd $SLURM_SUBMIT_DIR
 
-# Ensure no stale Snakemake lock remains in the working directory
-echo "Attempting to unlock Snakemake working directory if locked"
-# Try the supported unlock command first (harmless if no lock exists)
-snakemake -s Snakefile --unlock || true
-# Fallback: remove local .snakemake lock files if they still exist
-if [ -d ".snakemake" ]; then
-  echo "Removing stale .snakemake lock files"
-  rm -rf .snakemake/locks .snakemake/lock || true
+# Unlock only when explicitly requested.
+# Auto-unlocking from every job can let concurrent jobs bypass lock safety.
+if [ "${ALLOW_SNAKEMAKE_UNLOCK:-0}" = "1" ]; then
+  echo "ALLOW_SNAKEMAKE_UNLOCK=1 set, running one-time unlock"
+  snakemake -s Snakefile --unlock || true
 fi
 
-# Run 
-mkdir -p logs
-which snakemake >/dev/null 2>&1 || { echo "snakemake not found in PATH; ensure it's installed in the conda env" >&2; exit 1; }
+# If CONFIG_FILE env var is set, use it
+if [ -n "${CONFIG_FILE-}" ]; then
+  CONFIG_ARG=(--configfile "$CONFIG_FILE")
+else
+  CONFIG_ARG=()
+fi
 
-# Run snakemake target explicitly
-snakemake -s Snakefile -j 1 solve_all_networks \
+# Run
+snakemake -s Snakefile -j 1 solve_all_networks "${CONFIG_ARG[@]}" \
   --rerun-incomplete \
   --latency-wait 60 \
   --printshellcmds
@@ -60,5 +57,12 @@ fi
 : ${NETWORK_PATH:="results/networks/elec_s_10_ec_lcopt_Co2L-3h.nc"}
 : ${OUTPUT_NETWORK:="results/networks/elec_s_10_ec_lcopt_Co2L-3h_scaled.nc"}
 
+echo "Post-processing network: $NETWORK_PATH -> $OUTPUT_NETWORK"
 
+# Run scaling script 
+python3 scripts/scale_generation.py \
+  --network "$NETWORK_PATH" \
+  --obs-solar data/custom/observed_solar.csv \
+  --obs-conv data/custom/observed_conv.csv \
+  --output "$OUTPUT_NETWORK"
 
