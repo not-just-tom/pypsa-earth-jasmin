@@ -28,12 +28,18 @@ conda activate pypsa 2>/dev/null || conda activate pypsa-earth 2>/dev/null || {
   exit 1
 }
 
-# Ensure snakemake is available, then unlock if needed
+# Ensure snakemake is available
 which snakemake >/dev/null 2>&1 || { echo "snakemake not found in PATH; ensure it's installed in the conda env" >&2; exit 1; }
-snakemake -s Snakefile --unlock || true
 
 cd "$SLURM_SUBMIT_DIR"
 mkdir -p logs
+
+# Unlock only when explicitly requested.
+# Auto-unlocking from every job can let concurrent jobs bypass lock safety.
+if [ "${ALLOW_SNAKEMAKE_UNLOCK:-0}" = "1" ]; then
+  echo "ALLOW_SNAKEMAKE_UNLOCK=1 set, running one-time unlock"
+  snakemake -s Snakefile --unlock || true
+fi
 
 echo "Running snakemake with configfile: $CONFIG_FILE"
 snakemake -j 1 solve_all_networks --configfile "$CONFIG_FILE"
