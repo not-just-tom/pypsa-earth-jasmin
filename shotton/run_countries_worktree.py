@@ -56,44 +56,18 @@ def next_branch_name(repo: Path, base_name: str) -> str:
     return f"{base_name}-{i}"
 
 
-def find_config_template(worktree_dir: Path, repo_dir: Path) -> Path:
-    candidates = ["config.yaml", "config.default.yaml"]
-
-    for name in candidates:
-        p = worktree_dir / name
-        if p.exists():
-            return p
-
-    for name in candidates:
-        p = repo_dir / name
-        if p.exists():
-            return p
-
-    raise FileNotFoundError(
-        "Missing config template. Tried worktree and repo for: " + ", ".join(candidates)
-    )
-
-
-def create_country_config(worktree_dir: Path, repo_dir: Path, country: str, generated_subdir: Path) -> Path:
-    config_template = find_config_template(worktree_dir, repo_dir)
+def create_country_config(worktree_dir: Path, repo_dir: Path, country: str) -> Path:
+    config_template = repo_dir / "config.default.yaml"
+    if not config_template.exists():
+        raise FileNotFoundError(f"Missing config template: {config_template}")
 
     with config_template.open() as f:
         cfg = yaml.safe_load(f)
 
+    # Only change the modelled country; keep all other defaults from config.default.yaml.
     cfg["countries"] = [country]
-    cfg.setdefault("enable", {})
-    cfg["enable"]["build_cutout"] = True
 
-    cfg.setdefault("run", {})
-    cfg["run"]["shared_cutouts"] = False
-    cfg["run"]["name"] = country
-
-    cfg.setdefault("scenario", {})
-    cfg["scenario"]["clusters"] = ["min"]
-
-    out_dir = worktree_dir / generated_subdir
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / f"config_{country}.yaml"
+    out = worktree_dir / "config.yaml"
     with out.open("w") as f:
         yaml.safe_dump(cfg, f, sort_keys=False)
     return out
@@ -102,13 +76,11 @@ def create_country_config(worktree_dir: Path, repo_dir: Path, country: str, gene
 def submit_country_job(
     worktree_dir: Path,
     runner_relpath: str,
-    config_path: Path,
     country: str,
     account: str | None,
 ) -> str:
     export_items = [
         "ALL",
-        f"CONFIG_FILE={config_path}",
         "OBS_URL_CONV=",
         "OBS_URL_SOLAR=",
     ]
@@ -201,11 +173,6 @@ def main() -> int:
     parser.add_argument("--countries", required=True, help="Comma-separated ISO alpha-2 countries, e.g. DE,US,UK")
     parser.add_argument("--base-branch", default="main", help="Base branch to create per-country branches from")
     parser.add_argument("--runner", default="shotton/run.sh", help="Runner path relative to each worktree")
-    parser.add_argument(
-        "--generated-subdir",
-        default="configs/generated",
-        help="Relative path inside each worktree for generated country configs",
-    )
     parser.add_argument("--account", default=None, help="Optional Slurm account override")
     parser.add_argument(
         "--cleanup",
@@ -221,7 +188,6 @@ def main() -> int:
 
     repo = DEFAULT_REPO_ROOT
     worktrees_root = DEFAULT_WORKTREES_ROOT
-    generated_subdir = Path(args.generated_subdir)
 
     if not (repo / ".git").exists():
         print(f"Not a git repository: {repo}", file=sys.stderr)
@@ -255,13 +221,12 @@ def main() -> int:
                 )
 
             print(f"[{country}] Generating config override")
-            cfg_path = create_country_config(country_worktree, repo, country, generated_subdir)
+            cfg_path = create_country_config(country_worktree, repo, country)
 
             print(f"[{country}] Submitting run job")
             run_jobid = submit_country_job(
                 worktree_dir=country_worktree,
                 runner_relpath=args.runner,
-                config_path=cfg_path,
                 country=country,
                 account=args.account,
             )
@@ -279,12 +244,11 @@ def main() -> int:
                 stamp=stamp,
             )
             print(f"[{country}] Regenerating config override after recreation")
-            cfg_path = create_country_config(country_worktree, repo, country, generated_subdir)
+            cfg_path = create_country_config(country_worktree, repo, country)
             print(f"[{country}] Re-submitting run job")
             run_jobid = submit_country_job(
                 worktree_dir=country_worktree,
                 runner_relpath=args.runner,
-                config_path=cfg_path,
                 country=country,
                 account=args.account,
             )
