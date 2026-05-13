@@ -26,7 +26,13 @@ DEFAULT_RUNNER = "shotton/run.sh"
 
 
 def run_cmd(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=cwd, check=True, text=True, capture_output=True)
+    try:
+        return subprocess.run(cmd, cwd=cwd, check=True, text=True, capture_output=True)
+    except subprocess.CalledProcessError as err:
+        stderr = (err.stderr or "").strip()
+        stdout = (err.stdout or "").strip()
+        details = stderr or stdout or "(no output)"
+        raise RuntimeError(f"Command failed: {' '.join(cmd)}\n{details}") from err
 
 
 def parse_job_id(sbatch_output: str) -> str | None:
@@ -47,7 +53,7 @@ def ensure_worktree(repo: Path, worktrees_root: Path, country: str, stamp: str) 
         return worktree_dir
 
     print(f"[{country}] Creating worktree at {worktree_dir}")
-    run_cmd(["git", "-C", str(repo), "worktree", "add", str(worktree_dir), "main"])
+    run_cmd(["git", "-C", str(repo), "worktree", "add", "--detach", str(worktree_dir), "main"])
     return worktree_dir
 
 
