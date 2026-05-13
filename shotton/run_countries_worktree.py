@@ -41,28 +41,13 @@ def sanitize_country(country: str) -> str:
     return value
 
 
-def next_branch_name(repo: Path, country: str, stamp: str) -> str:
-    base_name = f"wt-{country.lower()}-{stamp}"
-    cp = run_cmd(["git", "-C", str(repo), "branch", "--list", f"{base_name}*"])
-    existing = {line.strip().lstrip("*").strip() for line in cp.stdout.splitlines() if line.strip()}
-    if base_name not in existing:
-        return base_name
-    index = 1
-    while f"{base_name}-{index}" in existing:
-        index += 1
-    return f"{base_name}-{index}"
-
-
 def ensure_worktree(repo: Path, worktrees_root: Path, country: str, stamp: str) -> Path:
     worktree_dir = worktrees_root / country
     if worktree_dir.exists() and any(worktree_dir.iterdir()):
         return worktree_dir
 
-    branch_name = next_branch_name(repo, country, stamp)
-    print(f"[{country}] Creating branch {branch_name}")
-    run_cmd(["git", "-C", str(repo), "branch", branch_name, "main"])
     print(f"[{country}] Creating worktree at {worktree_dir}")
-    run_cmd(["git", "-C", str(repo), "worktree", "add", str(worktree_dir), branch_name])
+    run_cmd(["git", "-C", str(repo), "worktree", "add", str(worktree_dir), "main"])
     return worktree_dir
 
 
