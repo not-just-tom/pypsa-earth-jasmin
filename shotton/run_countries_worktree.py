@@ -5,13 +5,15 @@ main clone template, and submit one Slurm job per country with CONFIG_FILE
 set explicitly.
 
 Usage example:
-  python shotton/run_countries_worktree.py --country DE,US
+    python shotton/run_countries_worktree.py --country DE,US
+    python shotton/run_countries_worktree.py --country DE,US --reuse
 """
 
 from __future__ import annotations
 
 import argparse
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -56,9 +58,20 @@ def resolve_template_config(repo: Path) -> Path:
     raise FileNotFoundError(f"No template config found in {repo}. Expected one of: {expected}")
 
 
-def ensure_clone(repo: Path, clones_root: Path, country: str) -> Path:
+def ensure_clone(repo: Path, clones_root: Path, country: str, fresh: bool = True) -> Path:
     clone_dir = clones_root / country
     git_marker = clone_dir / ".git"
+
+    if fresh and clone_dir.exists():
+        if git_marker.is_dir():
+            print(f"[{country}] Removing existing clone for a clean run: {clone_dir}")
+            shutil.rmtree(clone_dir)
+        else:
+            raise RuntimeError(
+                f"Refusing to delete non-git directory for --fresh: {clone_dir}. "
+                "Please inspect/remove it manually."
+            )
+
     if git_marker.is_dir():
         return clone_dir
     if git_marker.exists() and not git_marker.is_dir():
@@ -70,7 +83,8 @@ def ensure_clone(repo: Path, clones_root: Path, country: str) -> Path:
         raise RuntimeError(f"Target exists but is not a git clone: {clone_dir}")
 
     print(f"[{country}] Cloning repo into {clone_dir}")
-    run_cmd(["git", "clone", str(repo), str(clone_dir)])
+    # Avoid local clone optimizations so each clone is fully independent.
+    run_cmd(["git", "clone", "--no-local", str(repo), str(clone_dir)])
     return clone_dir
 
 
@@ -90,12 +104,20 @@ def write_country_config(template: Path, clone_dir: Path, country: str) -> Path:
 
 
 def submit_country_job(clone_dir: Path, country: str, config_path: Path) -> str:
-    config_name = config_path.name
+    config_file = str(config_path.resolve())
+    log_dir = clone_dir / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
     cmd = [
         "sbatch",
         "--job-name",
         country,
-        f"--export=ALL,CONFIG_FILE={config_name},OBS_URL_CONV=,OBS_URL_SOLAR=",
+        "--chdir",
+        str(clone_dir),
+        "--output",
+        str(log_dir / "slurm-%j.out"),
+        "--error",
+        str(log_dir / "slurm-%j.err"),
+        f"--export=ALL,CONFIG_FILE={config_file},OBS_URL_CONV=,OBS_URL_SOLAR=",
         DEFAULT_RUNNER,
     ]
     cp = run_cmd(cmd, cwd=clone_dir)
@@ -108,6 +130,20 @@ def submit_country_job(clone_dir: Path, country: str, config_path: Path) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create country clones and submit country jobs")
     parser.add_argument("--country", required=True, help="Comma-separated ISO alpha-2 countries, e.g. DE,US,UK")
+    freshness = parser.add_mutually_exclusive_group()
+    freshness.add_argument(
+        "--fresh",
+        dest="fresh",
+        action="store_true",
+        help="Force a clean clone per country (default)",
+    )
+    freshness.add_argument(
+        "--reuse",
+        dest="fresh",
+        action="store_false",
+        help="Reuse existing per-country clones instead of recreating them",
+    )
+    parser.set_defaults(fresh=True)
     args = parser.parse_args()
 
     repo = DEFAULT_REPO_ROOT
@@ -122,9 +158,13 @@ def main() -> int:
     template_config = resolve_template_config(repo)
 
     print(f"Using template config: {template_config}")
+    if args.fresh:
+        print("Fresh mode enabled: existing country clones will be re-created")
+    else:
+        print("Reuse mode enabled: existing country clones will be reused")
 
     for country in countries:
-        clone_dir = ensure_clone(repo, clones_root, country)
+        clone_dir = ensure_clone(repo, clones_root, country, fresh=args.fresh)
         print(f"[{country}] Writing per-country config")
         config_path = write_country_config(template_config, clone_dir, country)
         print(f"[{country}] Submitting job")
