@@ -42,6 +42,30 @@ def parse_job_id(sbatch_output: str) -> str | None:
     return match.group(1) if match else None
 
 
+def print_job_record(job_id: str, cwd: Path) -> None:
+    try:
+        cp = subprocess.run(
+            ["scontrol", "show", "job", job_id],
+            cwd=cwd,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+    except OSError as err:
+        print(f"[diag] could not query Slurm for job {job_id}: {err}")
+        return
+
+    print(f"[diag] slurm job record for {job_id} rc={cp.returncode}")
+    stdout = (cp.stdout or "").strip()
+    stderr = (cp.stderr or "").strip()
+    if stdout:
+        for line in stdout.splitlines():
+            if "StdOut=" in line or "StdErr=" in line or "Command=" in line or "WorkDir=" in line:
+                print(f"[diag] {line.strip()}")
+    if stderr:
+        print(f"[diag] scontrol stderr: {stderr}")
+
+
 def sanitize_country(country: str) -> str:
     value = country.strip().upper()
     if not re.fullmatch(r"[A-Z]{2}", value):
@@ -124,6 +148,7 @@ def submit_country_job(clone_dir: Path, country: str, config_path: Path) -> str:
     job_id = parse_job_id(cp.stdout)
     if not job_id:
         raise RuntimeError(f"Could not parse job id from sbatch output: {cp.stdout.strip()}")
+    print_job_record(job_id, clone_dir)
     return job_id
 
 
