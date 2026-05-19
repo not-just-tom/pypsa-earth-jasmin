@@ -9,7 +9,44 @@
 #SBATCH -o logs/slurm-%j.out
 #SBATCH -e logs/slurm-%j.err
 
+
 set -euo pipefail
+
+echo "[LOUD DIAG] --- job starting ---"
+echo "[LOUD DIAG] date: $(date)"
+echo "[LOUD DIAG] hostname: $(hostname)"
+echo "[LOUD DIAG] whoami: $(whoami)"
+echo "[LOUD DIAG] pwd: $(pwd)"
+echo "[LOUD DIAG] SLURM_JOB_ID: ${SLURM_JOB_ID:-}"
+echo "[LOUD DIAG] SLURM_SUBMIT_DIR: ${SLURM_SUBMIT_DIR:-}"
+echo "[LOUD DIAG] CONFIG_FILE: ${CONFIG_FILE:-}"
+echo "[LOUD DIAG] OBS_URL_CONV: ${OBS_URL_CONV:-}"
+echo "[LOUD DIAG] OBS_URL_SOLAR: ${OBS_URL_SOLAR:-}"
+echo "[LOUD DIAG] CONDA_DEFAULT_ENV: ${CONDA_DEFAULT_ENV:-}"
+echo "[LOUD DIAG] CONDA_PREFIX: ${CONDA_PREFIX:-}"
+echo "[LOUD DIAG] python: $(which python3) $(python3 --version 2>&1 | head -n1)"
+echo "[LOUD DIAG] snakemake: $(which snakemake) $(snakemake --version 2>&1 | head -n1)"
+echo "[LOUD DIAG] git: $(which git) $(git --version 2>&1 | head -n1)"
+echo "[LOUD DIAG] git root: $(git rev-parse --show-toplevel 2>/dev/null || echo N/A)"
+echo "[LOUD DIAG] git commit: $(git rev-parse HEAD 2>/dev/null || echo N/A)"
+echo "[LOUD DIAG] git branch: $(git branch --show-current 2>/dev/null || echo N/A)"
+echo "[LOUD DIAG] git status: $(git status --short 2>/dev/null | head -n 10)"
+echo "[LOUD DIAG] env snapshot (selected):"
+env | grep -E '^(USER|HOME|SHELL|HOSTNAME|CONDA|PYTHONPATH|CONFIG_FILE|OBS_URL|HTTP|HTTPS|NO_PROXY|SLURM)' | sort
+
+echo "[LOUD DIAG] Directory tree (top 100 entries):"
+find . -maxdepth 3 -print | head -n 100
+
+for d in data logs .snakemake; do
+  if [ -d "$d" ]; then
+    echo "[LOUD DIAG] Contents of $d (up to 100 entries):"
+    find "$d" | head -n 100
+  else
+    echo "[LOUD DIAG] $d missing"
+  fi
+done
+
+echo "[LOUD DIAG] --- end diagnostics ---"
 
 # Load modules / initialise conda for non-interactive shells
 if [ -f "$HOME/miniforge3/bin/conda" ]; then
