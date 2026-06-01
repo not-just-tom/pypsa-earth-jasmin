@@ -66,10 +66,13 @@ def configure_country(run_dir: Path, country: str) -> None:
 
     config["countries"] = [country]
 
+    scenario_clusters = config.get("scenario", {}).get("clusters", [])
+
     with config_path.open("w") as f:
         yaml.safe_dump(config, f, sort_keys=False)
 
     print(f"[{country}] configured config.yaml")
+    print(f"[{country}] scenario.clusters = {scenario_clusters}")
 
 
 def submit_job(run_dir: Path, country: str) -> None:
