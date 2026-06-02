@@ -56,22 +56,25 @@ def create_clone(country: str) -> Path:
 
 
 def configure_country(run_dir: Path, country: str) -> None:
-    config_path = run_dir / "config.yaml"
+    config_path = run_dir / "config.default.yaml"
 
     if not config_path.exists():
-        raise FileNotFoundError(f"No config.yaml found in {run_dir}")
+        raise FileNotFoundError(f"No config.default.yaml found in {run_dir}")
 
     with config_path.open() as f:
         config = yaml.safe_load(f)
 
     config["countries"] = [country]
 
-    scenario_clusters = config.get("scenario", {}).get("clusters", [])
-
     with config_path.open("w") as f:
         yaml.safe_dump(config, f, sort_keys=False)
 
-    print(f"[{country}] configured config.yaml")
+    # Report the cluster configuration from the edited default config.
+    scenario_clusters = config.get("scenario", {}).get("clusters", None)
+    if scenario_clusters is None:
+        scenario_clusters = "(not found)"
+
+    print(f"[{country}] configured config.default.yaml")
     print(f"[{country}] scenario.clusters = {scenario_clusters}")
 
 

@@ -32,6 +32,24 @@ conda activate pypsa
 # isolate conda package cache
 export CONDA_PKGS_DIRS=$PWD/.conda_pkgs
 
+# print cluster config from config.default.yaml (config.yaml may be a minimal stub)
+echo "scenario.clusters (from config.default.yaml):"
+python - <<'PY'
+import yaml, sys
+for p in ["config.yaml", "config.default.yaml"]:
+    try:
+        with open(p) as f:
+            cfg = yaml.safe_load(f) or {}
+        clusters = cfg.get("scenario", {}).get("clusters")
+        if clusters is not None:
+            print(f"  {p}: scenario.clusters = {clusters}")
+            break
+    except FileNotFoundError:
+        continue
+else:
+    print("  WARNING: could not find scenario.clusters in config.yaml or config.default.yaml")
+PY
+
 # ---------------------------------------------------
 # Snakemake unlock just in case
 # ---------------------------------------------------
@@ -43,6 +61,22 @@ fi
 # ---------------------------------------------------
 # Run workflow
 # ---------------------------------------------------
+
+# Use config.default.yaml as the country source-of-truth by preventing
+# config.yaml from overriding it during this run.
+CONFIG_YAML_BACKUP=""
+if [[ -f "config.yaml" ]]; then
+    CONFIG_YAML_BACKUP="config.yaml.runsh.bak"
+    mv "config.yaml" "$CONFIG_YAML_BACKUP"
+fi
+
+restore_config_yaml() {
+    if [[ -n "$CONFIG_YAML_BACKUP" && -f "$CONFIG_YAML_BACKUP" ]]; then
+        mv "$CONFIG_YAML_BACKUP" "config.yaml"
+    fi
+}
+
+trap restore_config_yaml EXIT
 
 snakemake \
     -s Snakefile \
