@@ -51,6 +51,7 @@ def create_clone(country: str) -> Path:
             "*.pyc",
             "resources",
             "networks",
+            "cutouts",
             "results",
             "logs",
             "configs/generated",
