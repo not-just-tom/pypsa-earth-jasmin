@@ -49,6 +49,8 @@ def create_clone(country: str) -> Path:
             "__pycache__",
             ".snakemake",
             "*.pyc",
+            "resources",
+            "networks",
             "results",
             "logs",
             "configs/generated",
