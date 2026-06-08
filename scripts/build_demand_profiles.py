@@ -249,7 +249,106 @@ def build_demand_profiles(
 
     elif isinstance(scale, (int, float)):
         logger.info(f"Load data scaled with scaling factor {scale}.")
+
         gegis_load["Electricity demand"] *= scale
+
+    elif scale == "yes": # shotton: addition for triggering the scaling option within the rule I placed.
+        logger.info(f"Scaling data to the ember statistics found in shotton/data/monthly_ember.csv")
+        ember = pd.read_csv(
+            "shotton/data/monthly_ember.csv",
+            parse_dates=["Date"],
+            dayfirst=True,
+        )
+
+        ember = ember[
+            (ember["Category"] == "Electricity demand")
+            & (ember["Subcategory"] == "Demand")
+            & (ember["Variable"] == "Demand")
+            & (ember["Unit"] == "TWh")
+        ].copy()
+
+        ember["month"] = ember["Date"].dt.to_period("M")
+
+        for country in countries:
+
+            ember_country = ember[
+                ember["ISO 3 code"] == country
+            ].copy()
+
+            if ember_country.empty:
+                raise ValueError(
+                    f"No Ember electricity demand data found for {country}"
+                )
+
+            # detect annual-only data
+            if ember_country["month"].nunique() <= 1:
+
+                annual_total = ember_country["Value"].sum()
+
+                logger.warning(
+                    f"{country}: only annual Ember demand found. "
+                    f"Distributing {annual_total:.2f} TWh equally across 12 months."
+                )
+
+                year = ember_country["Date"].dt.year.iloc[0]
+
+                monthly_targets = pd.Series(
+                    annual_total / 12.0,
+                    index=pd.period_range(
+                        f"{year}-01",
+                        f"{year}-12",
+                        freq="M",
+                    ),
+                )
+
+            else:
+
+                monthly_targets = (
+                    ember_country.groupby("month")["Value"]
+                    .sum()
+                )
+
+            country_mask = gegis_load.region_code == country
+
+            country_load = gegis_load.loc[
+                country_mask,
+                "Electricity demand",
+            ]
+
+            months = country_load.index.to_period("M")
+
+            for month, ember_total in monthly_targets.items():
+
+                month_mask = country_mask & (
+                    gegis_load.index.to_period("M") == month
+                )
+
+                gegis_total = gegis_load.loc[
+                    month_mask,
+                    "Electricity demand",
+                ].sum()
+
+                if gegis_total <= 0:
+                    raise ValueError(
+                        f"{country} {month}: "
+                        f"GEGIS monthly demand is zero."
+                    )
+
+                ratio = ember_total / gegis_total
+
+                logger.info(
+                    f"{country} {month}: "
+                    f"GEGIS={gegis_total:.3f} "
+                    f"Ember={ember_total:.3f} "
+                    f"ratio={ratio:.3f}"
+                )
+
+                gegis_load.loc[
+                    month_mask,
+                    "Electricity demand",
+                ] *= ratio 
+
+                # end of shotton clause
 
     shapes = gpd.read_file(admin_shapes).set_index("GADM_ID")
     shapes["geometry"] = shapes["geometry"].apply(lambda x: make_valid(x))
@@ -415,7 +514,7 @@ if __name__ == "__main__":
         regions,
         admin_shapes,
         countries,
-        scale,
+        'yes', # shotton: triggering the scaling option within the rule I placed. 
         start_date,
         end_date,
         out_path,
