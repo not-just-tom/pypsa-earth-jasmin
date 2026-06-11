@@ -50,12 +50,24 @@ def create_clone(country: str) -> Path:
             ".snakemake",
             "*.pyc",
             "networks",
-            'resources',
             "cutouts",
             "results",
             "logs",
             "configs/generated",
-        ),
+
+            # datafolder non-essentials
+            "copernicus",
+            "eez",
+            "gadm",
+            "GDP",
+            "gebco",
+            "hydrobasins",
+            "landcover",
+            "natura",
+            "osm",
+            "ssp2-2.6",
+            "WorldPop",
+        )
     )
 
     return run_dir
