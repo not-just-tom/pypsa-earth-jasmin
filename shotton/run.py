@@ -50,6 +50,7 @@ def create_clone(country: str) -> Path:
             ".snakemake",
             "*.pyc",
             "networks",
+            'resources',
             "cutouts",
             "results",
             "logs",
