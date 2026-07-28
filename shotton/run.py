@@ -84,15 +84,19 @@ def configure_country(run_dir: Path, country: str) -> None:
 
     config["countries"] = [country]
 
+    # Start with build_cutout enabled.
+    # run.sh will switch it to False before submitting the continuation job.
+    config["build_cutout"] = True
+
     with config_path.open("w") as f:
         yaml.safe_dump(config, f, sort_keys=False)
 
-    # Report the cluster configuration from the edited default config.
     scenario_clusters = config.get("scenario", {}).get("clusters", None)
     if scenario_clusters is None:
         scenario_clusters = "(not found)"
 
     print(f"[{country}] configured config.default.yaml")
+    print(f"[{country}] build_cutout = {config['build_cutout']}")
     print(f"[{country}] scenario.clusters = {scenario_clusters}")
 
 
@@ -102,18 +106,15 @@ def submit_job(run_dir: Path, country: str) -> None:
 
     cmd = [
         "sbatch",
-        "--job-name",
-        f"pypsa-{country}",
-        "--chdir",
-        str(run_dir),
-        "--output",
-        str(logs_dir / "slurm-%j.out"),
-        "--error",
-        str(logs_dir / "slurm-%j.err"),
+        "--job-name", f"pypsa-{country}-cutout",
+        "--export", "ALL,STAGE=cutout",
+        "--chdir", str(run_dir),
+        "--output", str(logs_dir / "slurm-%j.out"),
+        "--error", str(logs_dir / "slurm-%j.err"),
         RUN_SCRIPT,
     ]
 
-    print(f"[{country}] submitting")
+    print(f"[{country}] submitting cutout stage")
     print(" ".join(cmd))
 
     cp = run(cmd, cwd=run_dir)
