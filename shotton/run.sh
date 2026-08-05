@@ -19,6 +19,9 @@ set -euo pipefail
 
 STAGE="${STAGE:-full}"
 
+eval "$("$HOME/miniforge3/bin/conda" shell.bash hook)"
+conda activate pypsa
+
 # Use config.default.yaml as the country source-of-truth by preventing
 # config.yaml from overriding it during this run.
 CONFIG_YAML_BACKUP=""
