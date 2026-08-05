@@ -1,4 +1,13 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash
+#SBATCH --account=gbov
+#SBATCH --job-name=multi-country
+#SBATCH --partition=standard
+#SBATCH --qos=high
+#SBATCH --nodes=1
+#SBATCH --time=2-00:00:00
+#SBATCH --mem=64G
+#SBATCH -o logs/slurm-%j.out
+#SBATCH -e logs/slurm-%j.err
 
 # ---------------------------------------------------
 # Run workflow
