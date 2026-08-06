@@ -50,19 +50,19 @@ import yaml
 with open("config.default.yaml") as f:
     cfg = yaml.safe_load(f)
 
-cfg["build_cutout"] = True
+cfg.setdefault("enable", {})["build_cutout"] = True
 
 with open("config.default.yaml", "w") as f:
     yaml.safe_dump(cfg, f, sort_keys=False)
 PY
 
     snakemake \
-        -s Snakefile \
-        -j 1 \
-        build_cutout \
-        --rerun-incomplete \
-        --latency-wait 60 \
-        --printshellcmds
+    -s Snakefile \
+    -j 1 \
+    cutouts/cutout-2023-era5.nc \
+    --rerun-incomplete \
+    --latency-wait 60 \
+    --printshellcmds
 
     echo
     echo "Cutout completed successfully."
@@ -74,7 +74,7 @@ import yaml
 with open("config.default.yaml") as f:
     cfg = yaml.safe_load(f)
 
-cfg["build_cutout"] = False
+cfg.setdefault("enable", {})["build_cutout"] = False
 
 with open("config.default.yaml", "w") as f:
     yaml.safe_dump(cfg, f, sort_keys=False)
