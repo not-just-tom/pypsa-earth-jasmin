@@ -10,7 +10,7 @@ import yaml
 
 REPO_ROOT = Path("/gws/ssde/j25b/gbov/PyPSA-Earth/pypsa-earth-jasmin")
 RUNS_ROOT = Path("/gws/ssde/j25b/gbov/PyPSA-Earth/multi-runs")
-RUN_SCRIPT = "shotton/run_cutout.sh"
+RUN_SCRIPT = "shotton/run.sh"
 
 
 def run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
