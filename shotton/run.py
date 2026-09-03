@@ -10,7 +10,7 @@ import yaml
 
 REPO_ROOT = Path("/gws/ssde/j25b/gbov/PyPSA-Earth/pypsa-earth-jasmin")
 RUNS_ROOT = Path("/gws/ssde/j25b/gbov/PyPSA-Earth/multi-runs")
-RUN_SCRIPT = "shotton/run.sh"
+RUN_SCRIPT = "shotton/run_cutout.sh"
 
 
 def run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
@@ -74,12 +74,10 @@ def create_clone(country: str) -> Path:
 
 
 def configure_country(run_dir: Path, country: str) -> None:
-    # Snakefile loads config.yaml last, so use it for country-specific
-    # overrides without altering the cloned defaults.
-    config_path = run_dir / "config.yaml"
+    config_path = run_dir / "config.default.yaml"
 
     if not config_path.exists():
-        raise FileNotFoundError(f"No config.yaml found in {run_dir}")
+        raise FileNotFoundError(f"No config.default.yaml found in {run_dir}")
 
     with config_path.open() as f:
         config = yaml.safe_load(f) or {}
@@ -94,9 +92,7 @@ def configure_country(run_dir: Path, country: str) -> None:
     if scenario_clusters is None:
         scenario_clusters = "(not found)"
 
-    print(f"[{country}] configured config.yaml")
-    print(f"[{country}] enable.build_cutout = {config['enable']['build_cutout']}")
-    print(f"[{country}] scenario.clusters = {scenario_clusters}")
+    print(f"[{country}] configured config.default.yaml")
 
 
 def submit_job(run_dir: Path, country: str) -> None:
@@ -113,11 +109,6 @@ def submit_job(run_dir: Path, country: str) -> None:
     ]
 
     print(f"[{country}] submitting workflow")
-    print(" ".join(cmd))
-
-    cp = run(cmd, cwd=run_dir)
-
-    print(cp.stdout.strip())
 
 
 def main() -> None:
