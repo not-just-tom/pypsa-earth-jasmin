@@ -109,6 +109,9 @@ def submit_job(run_dir: Path, country: str) -> None:
     ]
 
     print(f"[{country}] submitting workflow")
+    cp = run(cmd, cwd=run_dir)
+
+    print(cp.stdout.strip())
 
 
 def main() -> None:
