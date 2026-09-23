@@ -83,7 +83,7 @@ def configure_country(run_dir: Path, country: str, skip_download: bool, clusters
         config = yaml.safe_load(f) or {}
 
     config["countries"] = [country]
-    if skip_download:
+    if skip_download is True:
         if "enable" in config:
             for key in config["enable"]:
                 config["enable"][key] = False
