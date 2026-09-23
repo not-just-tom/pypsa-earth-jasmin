@@ -88,10 +88,9 @@ def configure_country(run_dir: Path, country: str, skip_download: bool, clusters
             for key in config["enable"]:
                 config["enable"][key] = False
 
-    if clusters is not None:
-        config.setdefault("scenario")["clusters"] = clusters
-    else:
-        config.setdefault("scenario", {})["clusters"] = 'min'
+    config.setdefault("scenario", {})["clusters"] = [
+        str(clusters) if clusters is not None else "min"
+]
 
     with config_path.open("w") as f:
         yaml.safe_dump(config, f, sort_keys=False)
