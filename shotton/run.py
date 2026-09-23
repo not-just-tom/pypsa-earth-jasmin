@@ -73,7 +73,7 @@ def create_clone(country: str) -> Path:
     return run_dir
 
 
-def configure_country(run_dir: Path, country: str) -> None:
+def configure_country(run_dir: Path, country: str, skip_download: bool, clusters:int) -> None:
     config_path = run_dir / "config.default.yaml"
 
     if not config_path.exists():
@@ -83,7 +83,15 @@ def configure_country(run_dir: Path, country: str) -> None:
         config = yaml.safe_load(f) or {}
 
     config["countries"] = [country]
-    config.setdefault("enable", {})["build_cutout"] = True
+    if skip_download:
+        if "enable" in config:
+            for key in config["enable"]:
+                config["enable"][key] = False
+
+    if clusters is not None:
+        config.setdefault("scenario")["clusters"] = clusters
+    else:
+        config.setdefault("scenario", {})["clusters"] = 'min'
 
     with config_path.open("w") as f:
         yaml.safe_dump(config, f, sort_keys=False)
@@ -123,7 +131,13 @@ def main() -> None:
         help="Comma-separated list, e.g. DE,FR,ES",
     )
 
+    parser.add_argument("--skip_download", required=False, action="store_true", help="doesn't dowwnload cutouts")
+    parser.add_argument("--clusters", type=int, required=False, help="number of clusters to use in optimisation")
+
     args = parser.parse_args()
+
+    skip_download = args.skip_download
+    clusters = args.clusters
 
     countries = [
         sanitize_country(c)
@@ -140,7 +154,7 @@ def main() -> None:
 
         run_dir = create_clone(country)
 
-        configure_country(run_dir, country)
+        configure_country(run_dir, country, skip_download, clusters)
 
         submit_job(run_dir, country)
 

@@ -11,11 +11,10 @@ logging:
 
 results_dir: results/
 summary_dir: results/
-
 foresight: overnight
 
 
-countries: ["CN"]
+countries: ["GB"]
 # Can be replaced by country ["NG", "BJ"], continent ["Africa"] or user-specific region, see more at https://pypsa-earth.readthedocs.io/en/latest/configuration.html#top-level-configuration
 
 enable:

@@ -400,7 +400,7 @@ def build_demand_profiles(
     end_date = pd.to_datetime(end_date) - pd.Timedelta(hours=1)
     demand_profiles = demand_profiles.loc[start_date:end_date]
 
-    # === shotton === #
+    # === shotton start === #
     
     from pathlib import Path
     import re
@@ -514,7 +514,7 @@ if __name__ == "__main__":
         regions,
         admin_shapes,
         countries,
-        'yes', # shotton: triggering the scaling option within the rule I placed. 
+        'no', # shotton: triggering the scaling option within the rule I placed. 
         start_date,
         end_date,
         out_path,
